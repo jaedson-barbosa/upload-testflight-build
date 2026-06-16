@@ -38,20 +38,17 @@ export async function submitBuildMetadataUpdates(params: {
   }
 
   const metadata = await extractAppMetadata(params.appPath)
-  const token = generateJwt(
-    params.issuerId,
-    params.apiKeyId,
-    params.apiPrivateKey
-  )
+  const makeToken = () =>
+    generateJwt(params.issuerId, params.apiKeyId, params.apiPrivateKey)
   const platform = buildPlatform(params.appType)
 
-  const appId = await lookupAppId(metadata.bundleId, token)
+  const appId = await lookupAppId(metadata.bundleId, makeToken())
   const buildId = await lookupBuildIdWithRetry(
     {
       appId,
       buildNumber: metadata.buildNumber,
       platform,
-      token
+      token: makeToken
     },
     20,
     30000,
@@ -64,33 +61,35 @@ export async function submitBuildMetadataUpdates(params: {
     }
   )
   if (wantsReleaseNotes) {
-    const localizationId = await lookupLocalizationId(buildId, token)
-    await updateReleaseNotes(localizationId, trimmed, token)
+    const localizationId = await lookupLocalizationId(buildId, makeToken)
+    await updateReleaseNotes(localizationId, trimmed, makeToken())
   }
   if (wantsEncryptionUpdate) {
     await updateEncryptionCompliance(
       buildId,
       parsedEncryption as boolean,
-      token
+      makeToken()
     )
   }
 }
 
 async function lookupLocalizationId(
   buildId: string,
-  token: string
+  token: string | (() => string)
 ): Promise<string> {
   const MAX_ATTEMPTS = 20
   const RETRY_DELAY_MS = 30000
 
   const result = await pollUntil(
     async () => {
+      const resolvedToken =
+        typeof token === 'function' ? token() : token
       const response = await fetchJson<{
         data?: Array<{id?: string}>
       }>(
         // Docs: https://developer.apple.com/documentation/appstoreconnectapi/betabuildlocalizations
         `/builds/${buildId}/betaBuildLocalizations`,
-        token,
+        resolvedToken,
         'Failed to query beta build localizations.'
       )
 

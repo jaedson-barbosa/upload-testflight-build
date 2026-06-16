@@ -62,7 +62,9 @@ export const appstoreApi: Uploader = {
         appId,
         buildNumber: metadata.buildNumber,
         platform,
-        token
+        issuerId: params.issuerId,
+        apiKeyId: params.apiKeyId,
+        apiPrivateKey: params.apiPrivateKey
       })
     } else {
       info('Skipping wait for App Store processing per configuration.')
@@ -284,16 +286,28 @@ async function pollBuildProcessing(params: {
   appId: string
   buildNumber: string
   platform: string
-  token: string
+  issuerId: string
+  apiKeyId: string
+  apiPrivateKey: string
 }): Promise<void> {
-  await waitForBuildProcessing(params, {
-    visibilityAttempts: VISIBILITY_ATTEMPTS,
-    visibilityDelayMs: VISIBILITY_DELAY_MS,
-    processingAttempts: MAX_PROCESSING_ATTEMPTS,
-    processingDelayMs: PROCESSING_DELAY_MS,
-    onRetry: message =>
-      warning(`Waiting for build ${params.buildNumber}: ${message}`)
-  })
+  const tokenFactory = () =>
+    generateJwt(params.issuerId, params.apiKeyId, params.apiPrivateKey)
+  await waitForBuildProcessing(
+    {
+      appId: params.appId,
+      buildNumber: params.buildNumber,
+      platform: params.platform,
+      token: tokenFactory
+    },
+    {
+      visibilityAttempts: VISIBILITY_ATTEMPTS,
+      visibilityDelayMs: VISIBILITY_DELAY_MS,
+      processingAttempts: MAX_PROCESSING_ATTEMPTS,
+      processingDelayMs: PROCESSING_DELAY_MS,
+      onRetry: message =>
+        warning(`Waiting for build ${params.buildNumber}: ${message}`)
+    }
+  )
 
   info('Build upload completed and processing is VALID.')
 }
