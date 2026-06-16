@@ -16,7 +16,7 @@ describe('fetchJson retries', () => {
       .mockResolvedValueOnce(makeResponse(502, 'Bad Gateway'))
       .mockResolvedValueOnce(makeJsonResponse({ok: true}))
 
-    const result = await fetchJson('/test', 'token', 'error')
+    const result = await fetchJson('/test', () => 'token', 'error')
 
     expect(result).toEqual({ok: true})
     expect(fetchMock).toHaveBeenCalledTimes(3)
@@ -26,7 +26,7 @@ describe('fetchJson retries', () => {
     fetchMock.mockResolvedValue(makeResponse(503, 'Service Unavailable'))
 
     await expect(
-      fetchJson('/test', 'token', 'error', 'GET', undefined, undefined, {
+      fetchJson('/test', () => 'token', 'error', 'GET', undefined, undefined, {
         retries: 1,
         baseDelayMs: 1,
         factor: 1
@@ -35,6 +35,33 @@ describe('fetchJson retries', () => {
 
     // retries=1 allows 2 total attempts; ensure no extra calls occurred
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries on 401 and calls token factory fresh each time', async () => {
+    fetchMock
+      .mockResolvedValueOnce(makeResponse(401, 'Unauthorized'))
+      .mockResolvedValueOnce(makeJsonResponse({ok: true}))
+
+    let callCount = 0
+    const getToken = () => {
+      callCount++
+      return `token-${callCount}`
+    }
+
+    const result = await fetchJson('/test', getToken, 'error', 'GET', undefined, undefined, {
+      retries: 1,
+      baseDelayMs: 1,
+      factor: 1
+    })
+
+    expect(result).toEqual({ok: true})
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    // Token factory called once per attempt
+    expect(callCount).toBe(2)
+    // Second attempt used a fresh token
+    const secondCallHeaders = (fetchMock.mock.calls[1][1] as RequestInit)
+      .headers as Record<string, string>
+    expect(secondCallHeaders['Authorization']).toBe('Bearer token-2')
   })
 })
 
