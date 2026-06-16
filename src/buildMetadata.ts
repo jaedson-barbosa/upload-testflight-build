@@ -48,7 +48,7 @@ export async function submitBuildMetadataUpdates(params: {
       appId,
       buildNumber: metadata.buildNumber,
       platform,
-      token: makeToken
+      getToken: makeToken
     },
     20,
     30000,
@@ -75,21 +75,19 @@ export async function submitBuildMetadataUpdates(params: {
 
 async function lookupLocalizationId(
   buildId: string,
-  token: string | (() => string)
+  getToken: () => string
 ): Promise<string> {
   const MAX_ATTEMPTS = 20
   const RETRY_DELAY_MS = 30000
 
   const result = await pollUntil(
     async () => {
-      const resolvedToken =
-        typeof token === 'function' ? token() : token
       const response = await fetchJson<{
         data?: Array<{id?: string}>
       }>(
         // Docs: https://developer.apple.com/documentation/appstoreconnectapi/betabuildlocalizations
         `/builds/${buildId}/betaBuildLocalizations`,
-        resolvedToken,
+        getToken(),
         'Failed to query beta build localizations.'
       )
 
