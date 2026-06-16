@@ -5,7 +5,7 @@ type BuildLookupParams = {
   appId: string
   buildNumber: string
   platform: string
-  token: string
+  getToken: () => string
 }
 
 const DEFAULT_ATTEMPTS = 20
@@ -26,7 +26,7 @@ export async function lookupBuildIdWithRetry(
       }>(
         // Docs: https://developer.apple.com/documentation/appstoreconnectapi/builds
         `/builds?${query}`,
-        params.token,
+        params.getToken(),
         'Failed to query builds.'
       )
       return response.data?.[0]?.id
@@ -48,7 +48,7 @@ export async function lookupBuildState(
   }>(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/builds
     `/builds?${query}`,
-    params.token,
+    params.getToken(),
     'Failed to query builds for processing state.'
   )
 

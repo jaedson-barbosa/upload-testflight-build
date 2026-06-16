@@ -18,7 +18,7 @@ describe('lookupBuildState', () => {
       appId: '123',
       buildNumber: '1',
       platform: 'IOS',
-      token: 'token'
+      getToken: () => 'token'
     })
 
     expect(state).toBe('PROCESSING')
@@ -32,7 +32,7 @@ describe('lookupBuildState', () => {
       appId: '123',
       buildNumber: '1',
       platform: 'IOS',
-      token: 'token'
+      getToken: () => 'token'
     })
 
     expect(state).toBeUndefined()
