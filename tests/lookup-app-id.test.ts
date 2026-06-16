@@ -18,14 +18,14 @@ describe('lookupAppId', () => {
       data: [{id: '123', attributes: {bundleId: 'com.example.app'}}]
     })
 
-    const id = await lookupAppId('com.example.app', 'token')
+    const id = await lookupAppId('com.example.app', () => 'token')
     expect(id).toBe('123')
     expect(fetchJsonMock).toHaveBeenCalled()
   })
 
   it('throws when no app is found', async () => {
     fetchJsonMock.mockResolvedValue({data: []})
-    await expect(lookupAppId('missing', 'token')).rejects.toThrow(
+    await expect(lookupAppId('missing', () => 'token')).rejects.toThrow(
       /Unable to find App Store Connect app/
     )
   })
@@ -38,7 +38,7 @@ describe('lookupAppId', () => {
       ]
     })
 
-    await expect(lookupAppId('com.example.app', 'token')).rejects.toThrow(
+    await expect(lookupAppId('com.example.app', () => 'token')).rejects.toThrow(
       /Multiple apps/
     )
   })

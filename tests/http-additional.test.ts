@@ -17,7 +17,7 @@ describe('http helpers additional coverage', () => {
       })
     )
 
-    await fetchJson('/some/path', 'token', 'error')
+    await fetchJson('/some/path', () => 'token', 'error')
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const callUrl = fetchMock.mock.calls[0][0] as URL
@@ -34,7 +34,7 @@ describe('http helpers additional coverage', () => {
       })
     )
 
-    const result = await fetchJson('/text', 'token', 'error')
+    const result = await fetchJson('/text', () => 'token', 'error')
     expect(result).toEqual({})
   })
 

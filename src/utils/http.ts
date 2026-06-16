@@ -1,7 +1,7 @@
 import {debug} from '@actions/core'
 
 const BASE_URL = 'https://api.appstoreconnect.apple.com/v1'
-const RETRY_STATUS_CODES = new Set([429, 500, 502, 503, 504])
+const RETRY_STATUS_CODES = new Set([401, 429, 500, 502, 503, 504])
 const DEFAULT_RETRY: RetryOptions = {retries: 5, baseDelayMs: 1000, factor: 2}
 
 type RetryOptions = {
@@ -12,7 +12,7 @@ type RetryOptions = {
 
 export async function fetchJson<T = unknown>(
   path: string,
-  token: string,
+  getToken: () => string,
   errorMessage: string,
   method: 'GET' | 'POST' | 'PATCH' = 'GET',
   body?: unknown,
@@ -21,32 +21,29 @@ export async function fetchJson<T = unknown>(
 ): Promise<T> {
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path
   const url = new URL(normalizedPath, `${BASE_URL}/`)
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Accept-Language': 'en',
-    ...extraHeaders
-  }
-
-  const safeHeaders = {
-    ...headers,
-    Authorization: headers.Authorization ? '[REDACTED]' : undefined
-  }
 
   const stringifiedBody = body ? JSON.stringify(body) : undefined
-  debug(
-    `HTTP request: ${method} ${url.toString()} headers=${JSON.stringify(
-      safeHeaders
-    )} body=${stringifiedBody ?? '<none>'}`
-  )
 
   const response = await performWithRetry(
-    () =>
-      fetch(url, {
-        method,
-        headers,
-        body: stringifiedBody
-      }),
+    () => {
+      const token = getToken()
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept-Language': 'en',
+        ...extraHeaders
+      }
+      const safeHeaders = {
+        ...headers,
+        Authorization: headers.Authorization ? '[REDACTED]' : undefined
+      }
+      debug(
+        `HTTP request: ${method} ${url.toString()} headers=${JSON.stringify(
+          safeHeaders
+        )} body=${stringifiedBody ?? '<none>'}`
+      )
+      return fetch(url, {method, headers, body: stringifiedBody})
+    },
     retryOptions,
     `${method} ${url.toString()}`
   )

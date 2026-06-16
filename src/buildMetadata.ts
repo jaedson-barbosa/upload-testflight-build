@@ -42,7 +42,7 @@ export async function submitBuildMetadataUpdates(params: {
     generateJwt(params.issuerId, params.apiKeyId, params.apiPrivateKey)
   const platform = buildPlatform(params.appType)
 
-  const appId = await lookupAppId(metadata.bundleId, makeToken())
+  const appId = await lookupAppId(metadata.bundleId, makeToken)
   const buildId = await lookupBuildIdWithRetry(
     {
       appId,
@@ -62,13 +62,13 @@ export async function submitBuildMetadataUpdates(params: {
   )
   if (wantsReleaseNotes) {
     const localizationId = await lookupLocalizationId(buildId, makeToken)
-    await updateReleaseNotes(localizationId, trimmed, makeToken())
+    await updateReleaseNotes(localizationId, trimmed, makeToken)
   }
   if (wantsEncryptionUpdate) {
     await updateEncryptionCompliance(
       buildId,
       parsedEncryption as boolean,
-      makeToken()
+      makeToken
     )
   }
 }
@@ -87,7 +87,7 @@ async function lookupLocalizationId(
       }>(
         // Docs: https://developer.apple.com/documentation/appstoreconnectapi/betabuildlocalizations
         `/builds/${buildId}/betaBuildLocalizations`,
-        getToken(),
+        getToken,
         'Failed to query beta build localizations.'
       )
 
@@ -111,7 +111,7 @@ async function lookupLocalizationId(
 async function updateReleaseNotes(
   localizationId: string,
   releaseNotes: string,
-  token: string
+  getToken: () => string
 ): Promise<void> {
   const payload = {
     data: {
@@ -126,7 +126,7 @@ async function updateReleaseNotes(
   await fetchJson(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/betabuildlocalizations
     `/betaBuildLocalizations/${localizationId}`,
-    token,
+    getToken,
     'Failed to update TestFlight release note.',
     'PATCH',
     payload
@@ -137,12 +137,12 @@ async function updateReleaseNotes(
 async function updateEncryptionCompliance(
   buildId: string,
   usesNonExemptEncryption: boolean,
-  token: string
+  getToken: () => string
 ): Promise<void> {
   await fetchJson(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/builds
     `/builds/${buildId}`,
-    token,
+    getToken,
     'Failed to update encryption compliance for build.',
     'PATCH',
     {

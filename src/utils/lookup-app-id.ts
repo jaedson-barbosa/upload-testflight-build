@@ -2,7 +2,7 @@ import {fetchJson} from './http'
 
 export async function lookupAppId(
   bundleId: string,
-  token: string
+  getToken: () => string
 ): Promise<string> {
   const params = new URLSearchParams()
   params.set('filter[bundleId]', bundleId)
@@ -12,7 +12,7 @@ export async function lookupAppId(
   }>(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/apps
     `/apps?${params.toString()}`,
-    token,
+    getToken,
     'Failed to locate App Store Connect application.'
   )
 

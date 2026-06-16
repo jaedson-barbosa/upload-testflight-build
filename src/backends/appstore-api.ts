@@ -31,7 +31,7 @@ export const appstoreApi: Uploader = {
       `Preparing build upload for platform=${platform}, file=${fileName}, size=${fileSize} bytes`
     )
 
-    const appId = await lookupAppId(metadata.bundleId, makeToken())
+    const appId = await lookupAppId(metadata.bundleId, makeToken)
     debug(`Resolved appId=${appId} for bundleId=${metadata.bundleId}`)
 
     const buildUpload = await createBuildUpload(
@@ -43,7 +43,7 @@ export const appstoreApi: Uploader = {
         fileName,
         fileSize
       },
-      makeToken()
+      makeToken
     )
     debug(
       `Created build upload id=${buildUpload.id}, operations=${buildUpload.uploadOperations.length}`
@@ -51,7 +51,7 @@ export const appstoreApi: Uploader = {
 
     await performUpload(buildUpload, params.appPath)
     info('Finished uploading build chunks.')
-    await completeBuildUpload(buildUpload.fileId, makeToken())
+    await completeBuildUpload(buildUpload.fileId, makeToken)
     info('Marked build upload as complete; waiting for processing.')
 
     if (params.waitForProcessing !== false) {
@@ -92,7 +92,7 @@ async function createBuildUpload(
     fileName: string
     fileSize: number
   },
-  token: string
+  getToken: () => string
 ): Promise<BuildUpload> {
   const payload = {
     data: {
@@ -123,7 +123,7 @@ async function createBuildUpload(
   }>(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/build-uploads
     '/buildUploads',
-    token,
+    getToken,
     'Failed to create App Store build upload.',
     'POST',
     payload
@@ -140,7 +140,7 @@ async function createBuildUpload(
       response.data.id,
       params.fileName,
       params.fileSize,
-      token
+      getToken
     )
     fileId = created.fileId
     // If inline operations were empty for some reason, fall back to created ops.
@@ -152,7 +152,7 @@ async function createBuildUpload(
       response.data.id,
       params.fileName,
       params.fileSize,
-      token
+      getToken
     )
     fileId = created.fileId
     uploadOperations = created.uploadOperations
@@ -173,7 +173,7 @@ async function createBuildUploadFile(
   uploadId: string,
   fileName: string,
   fileSize: number,
-  token: string
+  getToken: () => string
 ): Promise<{fileId: string; uploadOperations: UploadOperation[]}> {
   const response = await fetchJson<{
     data?: {
@@ -183,7 +183,7 @@ async function createBuildUploadFile(
   }>(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/build-upload-files
     '/buildUploadFiles',
-    token,
+    getToken,
     'Failed to create App Store build upload file.',
     'POST',
     {
@@ -257,12 +257,12 @@ async function performUpload(
 
 async function completeBuildUpload(
   fileId: string,
-  token: string
+  getToken: () => string
 ): Promise<void> {
   await fetchJson(
     // Docs: https://developer.apple.com/documentation/appstoreconnectapi/build-upload-files
     `/buildUploadFiles/${fileId}`,
-    token,
+    getToken,
     'Failed to finalize App Store build upload.',
     'PATCH',
     {
